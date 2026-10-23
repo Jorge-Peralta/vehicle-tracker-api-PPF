@@ -24,10 +24,12 @@ describe('GET /api/docs.json', () => {
         'delete /api/vehicles/{id}',
         'get /api/movements',
         'post /api/movements',
+        'get /api/movements/daily-summary',
         'get /api/drivers',
       ].sort(),
     )
     expect(Object.keys(response.body.components.schemas).sort()).toEqual([
+      'DailyMovementSummary',
       'DeleteVehicleResult',
       'Driver',
       'Error',

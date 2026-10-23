@@ -1,7 +1,8 @@
-import type { Prisma } from '../../generated/prisma/client.js'
+import type { MovementType, Prisma } from '../../generated/prisma/client.js'
 import { prisma } from '../../shared/db/prisma.js'
 import { ConflictError } from '../../shared/errors/app-error.js'
 import {
+  BUSINESS_UTC_OFFSET_MS,
   formatLocalDateTime,
   startOfLocalDay,
   startOfNextLocalDay,
@@ -9,7 +10,11 @@ import {
 import { findOrCreateDriver } from '../drivers/driver.service.js'
 import { formatPlate } from '../vehicles/vehicle.schemas.js'
 import { vehicleNotFoundError } from '../vehicles/vehicle.service.js'
-import type { ListMovementsQuery, RegisterMovementInput } from './movement.schemas.js'
+import type {
+  DailySummaryQuery,
+  ListMovementsQuery,
+  RegisterMovementInput,
+} from './movement.schemas.js'
 
 /** Fields returned for every movement, so the web can show plate and driver without extra calls. */
 const movementSelect = {
@@ -108,4 +113,34 @@ export async function listMovements(query: ListMovementsQuery) {
   ])
 
   return { data, total, page, pageSize }
+}
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Entries and exits per local day (Honduras time), one row per day of the range,
+ * including days without movements. Counted in the database with a single query.
+ */
+export async function getDailySummary({ from, to }: DailySummaryQuery) {
+  const offsetSeconds = BUSINESS_UTC_OFFSET_MS / 1000
+  const rows = await prisma.$queryRaw<{ date: string; type: MovementType; count: number }[]>`
+    SELECT
+      to_char((occurred_at AT TIME ZONE 'UTC') + ${offsetSeconds}::int * interval '1 second', 'YYYY-MM-DD') AS date,
+      type::text AS type,
+      count(*)::int AS count
+    FROM movements
+    WHERE occurred_at >= ${startOfLocalDay(from)} AND occurred_at < ${startOfNextLocalDay(to)}
+    GROUP BY 1, 2
+  `
+
+  const days = new Map<string, { date: string; entries: number; exits: number }>()
+  for (let time = Date.parse(from); time <= Date.parse(to); time += DAY_IN_MS) {
+    const date = new Date(time).toISOString().slice(0, 10)
+    days.set(date, { date, entries: 0, exits: 0 })
+  }
+  for (const { date, type, count } of rows) {
+    const day = days.get(date)
+    if (day) day[type === 'ENTRY' ? 'entries' : 'exits'] = count
+  }
+  return [...days.values()]
 }

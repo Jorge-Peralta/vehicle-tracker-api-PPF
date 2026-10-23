@@ -2,7 +2,7 @@
 
 API REST para registrar vehículos y llevar el control de sus entradas y salidas. Desarrollada con Node.js, Express 5 y TypeScript.
 
-El frontend se encuentra en un repositorio aparte: **vehicle-tracker-web**.
+El frontend se encuentra en un repositorio aparte: **vehicle-tracker-web-PPF**.
 
 ## Requisitos
 
@@ -95,17 +95,18 @@ Todos los errores comparten la misma estructura JSON:
 
 ## Endpoints
 
-| Método | Ruta                | Descripción                                                                                                                                                                     |
-| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/health`       | Verificación de estado                                                                                                                                                          |
-| GET    | `/api/vehicles`     | Lista los vehículos activos. Parámetros: `search` (marca, modelo o placa), `includeInactive=true`                                                                               |
-| GET    | `/api/vehicles/:id` | Obtiene un vehículo con su estado actual (`INSIDE`/`OUTSIDE`) y su último kilometraje                                                                                           |
-| POST   | `/api/vehicles`     | Crea un vehículo (`201`). Si la placa pertenece a un vehículo eliminado, lo reactiva (`200`)                                                                                    |
-| PUT    | `/api/vehicles/:id` | Actualiza un vehículo activo                                                                                                                                                    |
-| DELETE | `/api/vehicles/:id` | Elimina un vehículo. Responde `{ "result": "deleted" }` o `{ "result": "deactivated" }`                                                                                         |
-| GET    | `/api/movements`    | Lista entradas y salidas, de la más reciente a la más antigua. Filtros: `from`, `to` (`YYYY-MM-DD`), `vehicleId`, `driverId`, `type`; paginación: `page`, `pageSize` (máx. 100) |
-| POST   | `/api/movements`    | Registra una entrada o salida (`201`)                                                                                                                                           |
-| GET    | `/api/drivers`      | Lista los conductores en orden alfabético. Parámetro: `search`                                                                                                                  |
+| Método | Ruta                           | Descripción                                                                                                                                                                     |
+| ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`                  | Verificación de estado                                                                                                                                                          |
+| GET    | `/api/vehicles`                | Lista los vehículos activos. Parámetros: `search` (marca, modelo o placa), `includeInactive=true`                                                                               |
+| GET    | `/api/vehicles/:id`            | Obtiene un vehículo con su estado actual (`INSIDE`/`OUTSIDE`) y su último kilometraje                                                                                           |
+| POST   | `/api/vehicles`                | Crea un vehículo (`201`). Si la placa pertenece a un vehículo eliminado, lo reactiva (`200`)                                                                                    |
+| PUT    | `/api/vehicles/:id`            | Actualiza un vehículo activo                                                                                                                                                    |
+| DELETE | `/api/vehicles/:id`            | Elimina un vehículo. Responde `{ "result": "deleted" }` o `{ "result": "deactivated" }`                                                                                         |
+| GET    | `/api/movements`               | Lista entradas y salidas, de la más reciente a la más antigua. Filtros: `from`, `to` (`YYYY-MM-DD`), `vehicleId`, `driverId`, `type`; paginación: `page`, `pageSize` (máx. 100) |
+| POST   | `/api/movements`               | Registra una entrada o salida (`201`)                                                                                                                                           |
+| GET    | `/api/movements/daily-summary` | Entradas y salidas por día (hora de Honduras), un elemento por día incluidos los días sin movimientos. `from` y `to` obligatorios (`YYYY-MM-DD`), máximo 31 días                |
+| GET    | `/api/drivers`                 | Lista los conductores en orden alfabético. Parámetro: `search`                                                                                                                  |
 
 Las listas paginadas responden `{ data, total, page, pageSize }`.
 

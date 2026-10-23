@@ -72,5 +72,30 @@ export const listMovementsQuerySchema = z
     path: ['to'],
   })
 
+export const MAX_SUMMARY_DAYS = 31
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
+const requiredDaySchema = (fieldName: string) =>
+  z.iso.date({
+    error: (issue) =>
+      issue.input === undefined
+        ? `${fieldName} es obligatorio (AAAA-MM-DD)`
+        : `${fieldName} debe ser una fecha (AAAA-MM-DD)`,
+  })
+
+/** Inclusive range of local calendar days (YYYY-MM-DD), at most `MAX_SUMMARY_DAYS` long. */
+export const dailySummaryQuerySchema = z
+  .object({ from: requiredDaySchema('from'), to: requiredDaySchema('to') })
+  .refine((query) => query.from <= query.to, {
+    message: 'La fecha final debe ser igual o posterior a la fecha inicial',
+    path: ['to'],
+  })
+  .refine((query) => Date.parse(query.to) - Date.parse(query.from) < MAX_SUMMARY_DAYS * DAY_IN_MS, {
+    message: `El rango debe ser como máximo de ${MAX_SUMMARY_DAYS} días`,
+    path: ['to'],
+  })
+
 export type RegisterMovementInput = z.infer<typeof registerMovementSchema>
 export type ListMovementsQuery = z.infer<typeof listMovementsQuerySchema>
+export type DailySummaryQuery = z.infer<typeof dailySummaryQuerySchema>

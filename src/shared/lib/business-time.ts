@@ -3,7 +3,7 @@
  * (no daylight saving time), so a fixed offset is enough.
  */
 export const BUSINESS_UTC_OFFSET = '-06:00'
-const BUSINESS_UTC_OFFSET_MS = -6 * 60 * 60 * 1000
+export const BUSINESS_UTC_OFFSET_MS = -6 * 60 * 60 * 1000
 
 /** Formats an instant in local business time for user messages: "10/03/2026 04:00". */
 export function formatLocalDateTime(date: Date): string {

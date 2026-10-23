@@ -6,7 +6,9 @@ import {
 import { z } from 'zod'
 import { listDriversQuerySchema } from '../modules/drivers/driver.schemas.js'
 import {
+  dailySummaryQuerySchema,
   listMovementsQuerySchema,
+  MAX_SUMMARY_DAYS,
   registerMovementSchema,
 } from '../modules/movements/movement.schemas.js'
 import {
@@ -109,6 +111,15 @@ const movementPageSchema = registry.register(
     total: z.number().int(),
     page: z.number().int(),
     pageSize: z.number().int(),
+  }),
+)
+
+const dailyMovementSummarySchema = registry.register(
+  'DailyMovementSummary',
+  z.object({
+    date: z.string().openapi({ example: '2026-03-10', description: 'Día en hora de Honduras' }),
+    entries: z.number().int(),
+    exits: z.number().int(),
   }),
 )
 
@@ -259,6 +270,19 @@ registry.registerPath({
   request: { query: listMovementsQuerySchema },
   responses: {
     200: json(movementPageSchema, 'Página de movimientos'),
+    400: validationError,
+  },
+})
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/movements/daily-summary',
+  tags: ['Movimientos'],
+  summary: 'Cuenta entradas y salidas por día',
+  description: `Un elemento por día del rango, incluidos los días sin movimientos. from y to son obligatorios, días en hora de Honduras (UTC-6), ambos inclusive; máximo ${MAX_SUMMARY_DAYS} días.`,
+  request: { query: dailySummaryQuerySchema },
+  responses: {
+    200: json(z.array(dailyMovementSummarySchema), 'Conteo diario'),
     400: validationError,
   },
 })

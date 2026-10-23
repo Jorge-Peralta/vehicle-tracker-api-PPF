@@ -215,51 +215,51 @@ describe('POST /api/movements', () => {
   })
 })
 
-describe('GET /api/movements', () => {
-  async function seedMovements() {
-    const hilux = await createVehicle({ plate: 'HAA1111' })
-    const frontier = await createVehicle({ plate: 'HBB2222' })
-    const ana = await prisma.driver.create({
-      data: { fullName: 'Ana López', normalizedName: 'ana lópez' },
-    })
-    const carlos = await prisma.driver.create({
-      data: { fullName: 'Carlos Mejía', normalizedName: 'carlos mejía' },
-    })
-    const movements = [
-      // 23:30 on March 9 in Honduras
-      { vehicleId: hilux.id, driverId: ana.id, type: 'ENTRY', occurredAt: '2026-03-10T05:30:00Z' },
-      // 08:00 on March 10
-      {
-        vehicleId: hilux.id,
-        driverId: carlos.id,
-        type: 'EXIT',
-        occurredAt: '2026-03-10T14:00:00Z',
-      },
-      // 23:30 on March 10
-      {
-        vehicleId: frontier.id,
-        driverId: ana.id,
-        type: 'ENTRY',
-        occurredAt: '2026-03-11T05:30:00Z',
-      },
-      // 08:00 on March 11
-      {
-        vehicleId: frontier.id,
-        driverId: carlos.id,
-        type: 'EXIT',
-        occurredAt: '2026-03-11T14:00:00Z',
-      },
-    ] as const
-    await prisma.movement.createMany({
-      data: movements.map((movement, index) => ({
-        ...movement,
-        occurredAt: new Date(movement.occurredAt),
-        mileage: 100 + index,
-      })),
-    })
-    return { hilux, frontier, ana, carlos }
-  }
+async function seedMovements() {
+  const hilux = await createVehicle({ plate: 'HAA1111' })
+  const frontier = await createVehicle({ plate: 'HBB2222' })
+  const ana = await prisma.driver.create({
+    data: { fullName: 'Ana López', normalizedName: 'ana lópez' },
+  })
+  const carlos = await prisma.driver.create({
+    data: { fullName: 'Carlos Mejía', normalizedName: 'carlos mejía' },
+  })
+  const movements = [
+    // 23:30 on March 9 in Honduras
+    { vehicleId: hilux.id, driverId: ana.id, type: 'ENTRY', occurredAt: '2026-03-10T05:30:00Z' },
+    // 08:00 on March 10
+    {
+      vehicleId: hilux.id,
+      driverId: carlos.id,
+      type: 'EXIT',
+      occurredAt: '2026-03-10T14:00:00Z',
+    },
+    // 23:30 on March 10
+    {
+      vehicleId: frontier.id,
+      driverId: ana.id,
+      type: 'ENTRY',
+      occurredAt: '2026-03-11T05:30:00Z',
+    },
+    // 08:00 on March 11
+    {
+      vehicleId: frontier.id,
+      driverId: carlos.id,
+      type: 'EXIT',
+      occurredAt: '2026-03-11T14:00:00Z',
+    },
+  ] as const
+  await prisma.movement.createMany({
+    data: movements.map((movement, index) => ({
+      ...movement,
+      occurredAt: new Date(movement.occurredAt),
+      mileage: 100 + index,
+    })),
+  })
+  return { hilux, frontier, ana, carlos }
+}
 
+describe('GET /api/movements', () => {
   function occurredAtValues(body: { data: { occurredAt: string }[] }) {
     return body.data.map((movement) => movement.occurredAt)
   }
@@ -329,6 +329,48 @@ describe('GET /api/movements', () => {
       from: ['from debe ser una fecha (AAAA-MM-DD)'],
       type: ['El tipo debe ser ENTRY (entrada) o EXIT (salida)'],
       pageSize: ['pageSize debe ser como máximo 100'],
+    })
+  })
+})
+
+describe('GET /api/movements/daily-summary', () => {
+  it('counts entries and exits per Honduras day, including days without movements', async () => {
+    await seedMovements()
+
+    const response = await request(app).get(
+      '/api/movements/daily-summary?from=2026-03-08&to=2026-03-11',
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual([
+      { date: '2026-03-08', entries: 0, exits: 0 },
+      { date: '2026-03-09', entries: 1, exits: 0 },
+      { date: '2026-03-10', entries: 1, exits: 1 },
+      { date: '2026-03-11', entries: 0, exits: 1 },
+    ])
+  })
+
+  it('responds 400 for missing, reversed, or too long ranges', async () => {
+    const missing = await request(app).get('/api/movements/daily-summary')
+    const reversed = await request(app).get(
+      '/api/movements/daily-summary?from=2026-03-11&to=2026-03-10',
+    )
+    const tooLong = await request(app).get(
+      '/api/movements/daily-summary?from=2026-01-01&to=2026-03-10',
+    )
+
+    expect(missing.status).toBe(400)
+    expect(missing.body.errors).toEqual({
+      from: ['from es obligatorio (AAAA-MM-DD)'],
+      to: ['to es obligatorio (AAAA-MM-DD)'],
+    })
+    expect(reversed.status).toBe(400)
+    expect(reversed.body.errors).toEqual({
+      to: ['La fecha final debe ser igual o posterior a la fecha inicial'],
+    })
+    expect(tooLong.status).toBe(400)
+    expect(tooLong.body.errors).toEqual({
+      to: ['El rango debe ser como máximo de 31 días'],
     })
   })
 })
