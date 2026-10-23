@@ -13,6 +13,8 @@ services:
       - '5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # Creates the vehicle_tracker_test database on first start.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U vehicle_tracker -d vehicle_tracker']
       interval: 5s

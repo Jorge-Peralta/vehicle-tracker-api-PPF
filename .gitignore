@@ -3,6 +3,9 @@ dist
 coverage
 *.log
 
+# Prisma client, regenerated on install
+src/generated
+
 # Environment
 .env
 .env.*

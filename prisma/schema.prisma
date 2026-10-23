@@ -1,0 +1,65 @@
+// Data model for the vehicle entry/exit tracker.
+// Connection URLs live in prisma.config.ts (Prisma 7), not here.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Vehicle {
+  id        Int        @id @default(autoincrement())
+  brand     String
+  model     String
+  /// Normalized: uppercase, no spaces (e.g. "HAA1234").
+  plate     String     @unique
+  year      Int?
+  /// Vehicles with movements are soft-deleted to preserve their history.
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  movements Movement[]
+
+  @@map("vehicles")
+}
+
+model Driver {
+  id             Int        @id @default(autoincrement())
+  /// Display value, as typed (trimmed).
+  fullName       String     @map("full_name")
+  /// Lowercased, trimmed, and with collapsed spaces; used to find existing drivers.
+  normalizedName String     @unique @map("normalized_name")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  movements      Movement[]
+
+  @@map("drivers")
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+
+  @@map("movement_type")
+}
+
+model Movement {
+  id         Int          @id @default(autoincrement())
+  vehicleId  Int          @map("vehicle_id")
+  driverId   Int          @map("driver_id")
+  type       MovementType
+  /// Stored in UTC.
+  occurredAt DateTime     @map("occurred_at") @db.Timestamptz(3)
+  mileage    Int
+  createdAt  DateTime     @default(now()) @map("created_at")
+  vehicle    Vehicle      @relation(fields: [vehicleId], references: [id])
+  driver     Driver       @relation(fields: [driverId], references: [id])
+
+  @@index([vehicleId, occurredAt])
+  @@index([driverId])
+  @@index([occurredAt])
+  @@map("movements")
+}
