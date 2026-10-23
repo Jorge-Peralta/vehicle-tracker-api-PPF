@@ -4,21 +4,12 @@ API REST para registrar vehículos y llevar el control de sus entradas y salidas
 
 El frontend se encuentra en un repositorio aparte: **vehicle-tracker-web**.
 
-## Tecnologías
-
-- Node.js 24 + Express 5 + TypeScript
-- Zod para validar las variables de entorno y las solicitudes
-- PostgreSQL + Prisma 7 (con el adaptador `@prisma/adapter-pg`)
-- OpenAPI 3.1 generado desde los esquemas Zod (`@asteasolutions/zod-to-openapi`) + Swagger UI
-- Vitest + Supertest
-- oxlint + Prettier
-
 ## Requisitos
 
 - Node.js 24 o superior
 - Docker (para la base de datos PostgreSQL local)
 
-## Puesta en marcha
+## Instalación y configuración:
 
 ```bash
 npm install
@@ -28,6 +19,15 @@ npm run db:migrate        # aplica las migraciones a la base de datos de desarro
 npm run db:seed           # opcional: vehículos, conductores y movimientos de ejemplo
 npm run dev               # http://localhost:3000/api/health
 ```
+
+## Tecnologías
+
+- Node.js 24 + Express 5 + TypeScript
+- Zod para validar las variables de entorno y las solicitudes
+- PostgreSQL + Prisma 7 (con el adaptador `@prisma/adapter-pg`)
+- OpenAPI 3.1 generado desde los esquemas Zod (`@asteasolutions/zod-to-openapi`) + Swagger UI
+- Vitest + Supertest
+- oxlint + Prettier
 
 ## Documentación de la API
 
