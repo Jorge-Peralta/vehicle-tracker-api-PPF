@@ -2,7 +2,17 @@
 
 API REST para registrar vehículos y llevar el control de sus entradas y salidas. Desarrollada con Node.js, Express 5 y TypeScript.
 
-El frontend se encuentra en un repositorio aparte: **vehicle-tracker-web-PPF**.
+El frontend se encuentra en un repositorio aparte: **[vehicle-tracker-web-PPF](https://github.com/Jorge-Peralta/vehicle-tracker-web-PPF)**.
+
+## Demo en línea
+
+| Recurso                       | URL                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Documentación (Swagger UI)    | [vehicle-tracker-api-ppf.onrender.com/api/docs](https://vehicle-tracker-api-ppf.onrender.com/api/docs) |
+| Verificación de estado        | [/api/health](https://vehicle-tracker-api-ppf.onrender.com/api/health)                                 |
+| Aplicación web que la consume | [vehicle-tracker-web-ppf.vercel.app](https://vehicle-tracker-web-ppf.vercel.app)                       |
+
+Desplegada en Render (plan gratuito) con la base de datos en Neon. El servidor se suspende tras unos minutos sin uso, por lo que **la primera solicitud puede tardar entre 30 y 60 segundos** mientras se reactiva.
 
 ## Requisitos
 
