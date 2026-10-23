@@ -9,6 +9,7 @@ El frontend se encuentra en un repositorio aparte: **vehicle-tracker-web**.
 - Node.js 24 + Express 5 + TypeScript
 - Zod para validar las variables de entorno y las solicitudes
 - PostgreSQL + Prisma 7 (con el adaptador `@prisma/adapter-pg`)
+- OpenAPI 3.1 generado desde los esquemas Zod (`@asteasolutions/zod-to-openapi`) + Swagger UI
 - Vitest + Supertest
 - oxlint + Prettier
 
@@ -27,6 +28,15 @@ npm run db:migrate        # aplica las migraciones a la base de datos de desarro
 npm run db:seed           # opcional: vehículos, conductores y movimientos de ejemplo
 npm run dev               # http://localhost:3000/api/health
 ```
+
+## Documentación de la API
+
+Con el servidor en marcha:
+
+- **Swagger UI:** http://localhost:3000/api/docs
+- **Especificación OpenAPI (JSON):** http://localhost:3000/api/docs.json
+
+La especificación se genera a partir de los mismos esquemas Zod que validan las solicitudes, por lo que la documentación y la validación no pueden desincronizarse. El frontend genera sus tipos a partir de `/api/docs.json`.
 
 `npm install` también genera el cliente de Prisma (`src/generated/prisma`, no se versiona).
 
