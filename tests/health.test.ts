@@ -18,7 +18,7 @@ describe('unknown routes', () => {
     const response = await request(app).get('/api/does-not-exist')
 
     expect(response.status).toBe(404)
-    expect(response.body).toEqual({ message: 'Route GET /api/does-not-exist not found' })
+    expect(response.body).toEqual({ message: 'No existe la ruta GET /api/does-not-exist' })
   })
 })
 
@@ -30,6 +30,6 @@ describe('malformed JSON body', () => {
       .send('{"invalid"')
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'Malformed JSON body' })
+    expect(response.body).toEqual({ message: 'El cuerpo de la solicitud no es un JSON válido' })
   })
 })

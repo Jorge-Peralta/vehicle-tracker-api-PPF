@@ -75,15 +75,30 @@ Las tablas y columnas usan `snake_case` en PostgreSQL (`@@map`/`@map`), mientras
 Todos los errores comparten la misma estructura JSON:
 
 ```json
-{ "message": "Validation failed", "errors": { "plate": ["Invalid format"] } }
+{
+  "message": "Los datos enviados no son válidos",
+  "errors": { "plate": ["La placa debe tener 3 letras y 4 dígitos, por ejemplo HAA 1234"] }
+}
 ```
 
 `errors` solo aparece en los errores de validación.
 
 ## Endpoints
 
-| Método | Ruta          | Descripción            |
-| ------ | ------------- | ---------------------- |
-| GET    | `/api/health` | Verificación de estado |
+| Método | Ruta                | Descripción                                                                                       |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`       | Verificación de estado                                                                            |
+| GET    | `/api/vehicles`     | Lista los vehículos activos. Parámetros: `search` (marca, modelo o placa), `includeInactive=true` |
+| GET    | `/api/vehicles/:id` | Obtiene un vehículo con su estado actual (`INSIDE`/`OUTSIDE`) y su último kilometraje             |
+| POST   | `/api/vehicles`     | Crea un vehículo (`201`). Si la placa pertenece a un vehículo eliminado, lo reactiva (`200`)      |
+| PUT    | `/api/vehicles/:id` | Actualiza un vehículo activo                                                                      |
+| DELETE | `/api/vehicles/:id` | Elimina un vehículo. Responde `{ "result": "deleted" }` o `{ "result": "deactivated" }`           |
 
 Se irán agregando más endpoints a medida que avance el proyecto.
+
+### Reglas de vehículos
+
+- **Placa:** formato hondureño, tres letras y cuatro dígitos (`HAA 1234` o `HAA1234`). Se guarda en mayúsculas y sin espacios. El patrón está en `PLATE_PATTERN` (`src/modules/vehicles/vehicle.schemas.ts`).
+- **Campos:** `brand`, `model` y `plate` son obligatorios; `year` es opcional (entero, desde 1900 hasta el próximo año).
+- **Eliminación:** si el vehículo no tiene movimientos se elimina definitivamente (`deleted`); si los tiene, se desactiva (`deactivated`) para conservar el historial. Los vehículos desactivados no aparecen en los listados por defecto y no se pueden editar.
+- **Placa duplicada:** responde `409` si otro vehículo activo ya usa la placa.
