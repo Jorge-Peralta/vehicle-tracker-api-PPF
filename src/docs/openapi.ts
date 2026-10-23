@@ -82,6 +82,13 @@ const driverSchema = registry.register(
   z.object({
     id: z.number().int(),
     fullName: z.string().openapi({ example: 'Ana López' }),
+    identityNumber: z
+      .string()
+      .regex(/^\d{13}$/)
+      .openapi({
+        example: '0801199012345',
+        description: 'Número de Identidad hondureño: 13 dígitos, sin guiones (único)',
+      }),
   }),
 )
 
@@ -152,10 +159,10 @@ const listVehiclesQueryDocSchema = listVehiclesQuerySchema.extend({
 })
 
 const registerMovementBodySchema = registerMovementSchema.extend({
-  driverName: z.string().min(2).max(100).openapi({
-    example: 'Ana López',
+  driverId: z.number().int().positive().openapi({
+    example: 1,
     description:
-      'Se reutiliza el conductor con el mismo nombre (sin distinguir mayúsculas ni espacios) o se crea uno nuevo.',
+      'Id de un conductor existente (ver GET /api/drivers). Este endpoint no crea conductores.',
   }),
   occurredAt: z.iso.datetime({ offset: true }).openapi({
     example: '2026-03-10T08:30:00-06:00',
@@ -293,7 +300,7 @@ registry.registerPath({
   tags: ['Movimientos'],
   summary: 'Registra una entrada o salida',
   description:
-    'Reglas: los tipos se alternan (el primero puede ser cualquiera), la fecha no puede estar en el futuro y debe ser posterior al último movimiento, y el kilometraje no puede ser menor que el último. El conductor se reutiliza por nombre o se crea.',
+    'Reglas: los tipos se alternan (el primero puede ser cualquiera), la fecha no puede estar en el futuro y debe ser posterior al último movimiento, y el kilometraje no puede ser menor que el último. El conductor debe existir: los conductores solo se crean con los datos de ejemplo (seed).',
   request: {
     body: {
       content: {
@@ -301,7 +308,7 @@ registry.registerPath({
           schema: registerMovementBodySchema,
           example: {
             vehicleId: 1,
-            driverName: 'Ana López',
+            driverId: 1,
             type: 'ENTRY',
             occurredAt: '2026-03-10T08:30:00-06:00',
             mileage: 15230,
@@ -313,7 +320,7 @@ registry.registerPath({
   responses: {
     201: json(movementSchema, 'Movimiento registrado'),
     400: validationError,
-    404: json(errorSchema, 'Vehículo no encontrado o desactivado'),
+    404: json(errorSchema, 'Vehículo no encontrado o desactivado, o conductor no encontrado'),
     409: json(errorSchema, 'Se viola una regla de alternancia, fecha o kilometraje'),
   },
 })
@@ -323,6 +330,8 @@ registry.registerPath({
   path: '/api/drivers',
   tags: ['Conductores'],
   summary: 'Lista los conductores',
+  description:
+    'En orden alfabético. `search` busca por nombre o por Número de Identidad (se ignoran los guiones).',
   request: { query: listDriversQuerySchema },
   responses: {
     200: json(z.array(driverSchema), 'Lista de conductores'),

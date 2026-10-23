@@ -6,7 +6,6 @@
  */
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient, type MovementType } from '../src/generated/prisma/client.js'
-import { normalizeDriverName } from '../src/modules/drivers/driver-name.js'
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
@@ -27,7 +26,15 @@ const vehicles = [
   { brand: 'Kia', model: 'K2700', plate: 'HFG2468', year: 2015, isActive: false },
 ]
 
-const driverNames = ['Carlos Mejía', 'Ana Martínez', 'José Rodríguez', 'María López']
+// The only way drivers are created: registering a movement requires an existing driver.
+// Identity numbers follow the Honduran format: department and municipality (4 digits),
+// birth year (4), and a sequence number (5), stored without dashes.
+const drivers = [
+  { fullName: 'Carlos Mejía', identityNumber: '0801198512345' },
+  { fullName: 'Ana Martínez', identityNumber: '0501199203456' },
+  { fullName: 'José Rodríguez', identityNumber: '1804197800789' },
+  { fullName: 'María López', identityNumber: '0101200101234' },
+]
 
 /**
  * Builds an alternating ENTRY/EXIT history for one vehicle, ending a few hours ago,
@@ -67,12 +74,7 @@ async function main() {
   await prisma.vehicle.deleteMany()
 
   const createdVehicles = await prisma.vehicle.createManyAndReturn({ data: vehicles })
-  const createdDrivers = await prisma.driver.createManyAndReturn({
-    data: driverNames.map((fullName) => ({
-      fullName,
-      normalizedName: normalizeDriverName(fullName),
-    })),
-  })
+  const createdDrivers = await prisma.driver.createManyAndReturn({ data: drivers })
   const driverIds = createdDrivers.map((driver) => driver.id)
 
   // The last vehicle (HEF7890) is left without movements so it can be hard-deleted in the UI.

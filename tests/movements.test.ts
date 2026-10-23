@@ -17,6 +17,12 @@ async function createVehicle(data: { plate?: string; isActive?: boolean } = {}) 
   })
 }
 
+async function createDriver(data: { fullName?: string; identityNumber?: string } = {}) {
+  return prisma.driver.create({
+    data: { fullName: 'Ana López', identityNumber: '0801199012345', ...data },
+  })
+}
+
 function registerMovement(body: Record<string, unknown>) {
   return request(app).post('/api/movements').send(body)
 }
@@ -30,12 +36,13 @@ afterAll(async () => {
 })
 
 describe('POST /api/movements', () => {
-  it('registers a first movement of either type and creates the driver', async () => {
+  it('registers a first movement of either type for an existing driver', async () => {
     const vehicle = await createVehicle()
+    const driver = await createDriver()
 
     const response = await registerMovement({
       vehicleId: vehicle.id,
-      driverName: '  Ana   López ',
+      driverId: driver.id,
       type: 'EXIT',
       occurredAt: '2026-03-10T08:30:00-06:00',
       mileage: 1500,
@@ -48,38 +55,32 @@ describe('POST /api/movements', () => {
       occurredAt: '2026-03-10T14:30:00.000Z',
       mileage: 1500,
       vehicle: { id: vehicle.id, plate: 'HAA1234' },
-      driver: { fullName: 'Ana López' },
+      driver: { id: driver.id, fullName: 'Ana López', identityNumber: '0801199012345' },
     })
-    expect(await prisma.driver.findMany()).toMatchObject([
-      { fullName: 'Ana López', normalizedName: 'ana lópez' },
-    ])
+    expect(await prisma.driver.count()).toBe(1)
   })
 
-  it('reuses an existing driver regardless of case and spacing', async () => {
+  it('responds 404 for a driver that does not exist, without creating one', async () => {
     const vehicle = await createVehicle()
-    const base = { vehicleId: vehicle.id, mileage: 100 }
 
-    await registerMovement({
-      ...base,
-      driverName: 'Ana López',
+    const response = await registerMovement({
+      vehicleId: vehicle.id,
+      driverId: 999,
       type: 'ENTRY',
-      occurredAt: hoursAgo(2),
-    })
-    const second = await registerMovement({
-      ...base,
-      driverName: ' ana  LÓPEZ',
-      type: 'EXIT',
       occurredAt: hoursAgo(1),
+      mileage: 100,
     })
 
-    expect(second.status).toBe(201)
-    expect(second.body.driver.fullName).toBe('Ana López')
-    expect(await prisma.driver.count()).toBe(1)
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'No se encontró el conductor con id 999' })
+    expect(await prisma.driver.count()).toBe(0)
+    expect(await prisma.movement.count()).toBe(0)
   })
 
   it('responds 409 when the type repeats the last movement', async () => {
     const vehicle = await createVehicle()
-    const base = { vehicleId: vehicle.id, driverName: 'Ana López', mileage: 100 }
+    const driver = await createDriver()
+    const base = { vehicleId: vehicle.id, driverId: driver.id, mileage: 100 }
     await registerMovement({ ...base, type: 'ENTRY', occurredAt: hoursAgo(2) })
 
     const response = await registerMovement({ ...base, type: 'ENTRY', occurredAt: hoursAgo(1) })
@@ -93,7 +94,8 @@ describe('POST /api/movements', () => {
 
   it('responds 409 when mileage is lower than the last one, and accepts the same mileage', async () => {
     const vehicle = await createVehicle()
-    const base = { vehicleId: vehicle.id, driverName: 'Ana López' }
+    const driver = await createDriver()
+    const base = { vehicleId: vehicle.id, driverId: driver.id }
     await registerMovement({ ...base, type: 'ENTRY', occurredAt: hoursAgo(3), mileage: 500 })
 
     const lower = await registerMovement({
@@ -119,7 +121,8 @@ describe('POST /api/movements', () => {
 
   it('responds 409 when the date is not after the last movement', async () => {
     const vehicle = await createVehicle()
-    const base = { vehicleId: vehicle.id, driverName: 'Ana López', mileage: 100 }
+    const driver = await createDriver()
+    const base = { vehicleId: vehicle.id, driverId: driver.id, mileage: 100 }
     await registerMovement({ ...base, type: 'ENTRY', occurredAt: '2026-03-10T10:00:00Z' })
 
     const earlier = await registerMovement({
@@ -142,10 +145,11 @@ describe('POST /api/movements', () => {
 
   it('responds 400 for a date in the future', async () => {
     const vehicle = await createVehicle()
+    const driver = await createDriver()
 
     const response = await registerMovement({
       vehicleId: vehicle.id,
-      driverName: 'Ana López',
+      driverId: driver.id,
       type: 'ENTRY',
       occurredAt: new Date(Date.now() + 2 * HOUR_IN_MS).toISOString(),
       mileage: 100,
@@ -159,15 +163,16 @@ describe('POST /api/movements', () => {
     const missing = await registerMovement({})
     const malformed = await registerMovement({
       vehicleId: '1',
-      driverName: 'A1',
+      driverId: 'A1',
       type: 'IN',
       occurredAt: '2026-03-10 08:30',
       mileage: -5,
     })
 
     expect(missing.status).toBe(400)
+    expect(missing.body.errors.driverId).toEqual(['El conductor es obligatorio'])
     expect(Object.keys(missing.body.errors).sort()).toEqual([
-      'driverName',
+      'driverId',
       'mileage',
       'occurredAt',
       'type',
@@ -176,9 +181,7 @@ describe('POST /api/movements', () => {
     expect(malformed.status).toBe(400)
     expect(malformed.body.errors).toEqual({
       vehicleId: ['El id del vehículo debe ser un número'],
-      driverName: [
-        "El nombre del conductor solo puede contener letras, espacios y los caracteres . ' -",
-      ],
+      driverId: ['El id del conductor debe ser un número'],
       type: ['El tipo debe ser ENTRY (entrada) o EXIT (salida)'],
       occurredAt: ['La fecha debe estar en formato ISO 8601 con zona horaria'],
       mileage: ['El kilometraje no puede ser negativo'],
@@ -187,7 +190,8 @@ describe('POST /api/movements', () => {
 
   it('responds 404 for a missing or deactivated vehicle', async () => {
     const inactive = await createVehicle({ isActive: false })
-    const base = { driverName: 'Ana López', type: 'ENTRY', occurredAt: hoursAgo(1), mileage: 1 }
+    const driver = await createDriver()
+    const base = { driverId: driver.id, type: 'ENTRY', occurredAt: hoursAgo(1), mileage: 1 }
 
     const missing = await registerMovement({ ...base, vehicleId: 999 })
     const deactivated = await registerMovement({ ...base, vehicleId: inactive.id })
@@ -195,14 +199,15 @@ describe('POST /api/movements', () => {
     expect(missing.status).toBe(404)
     expect(missing.body).toEqual({ message: 'No se encontró el vehículo con id 999' })
     expect(deactivated.status).toBe(404)
-    expect(await prisma.driver.count()).toBe(0)
+    expect(await prisma.movement.count()).toBe(0)
   })
 
   it('accepts only one of two simultaneous entries for the same vehicle', async () => {
     const vehicle = await createVehicle()
+    const driver = await createDriver()
     const body = {
       vehicleId: vehicle.id,
-      driverName: 'Ana López',
+      driverId: driver.id,
       type: 'ENTRY',
       occurredAt: hoursAgo(1),
       mileage: 100,
@@ -218,12 +223,8 @@ describe('POST /api/movements', () => {
 async function seedMovements() {
   const hilux = await createVehicle({ plate: 'HAA1111' })
   const frontier = await createVehicle({ plate: 'HBB2222' })
-  const ana = await prisma.driver.create({
-    data: { fullName: 'Ana López', normalizedName: 'ana lópez' },
-  })
-  const carlos = await prisma.driver.create({
-    data: { fullName: 'Carlos Mejía', normalizedName: 'carlos mejía' },
-  })
+  const ana = await createDriver()
+  const carlos = await createDriver({ fullName: 'Carlos Mejía', identityNumber: '0501198501234' })
   const movements = [
     // 23:30 on March 9 in Honduras
     { vehicleId: hilux.id, driverId: ana.id, type: 'ENTRY', occurredAt: '2026-03-10T05:30:00Z' },

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { driverNameSchema } from '../drivers/driver.schemas.js'
 
 /** Allowed clock difference between the browser and the server when checking future dates. */
 const CLOCK_SKEW_MS = 60 * 1000
@@ -26,7 +25,15 @@ export const registerMovementSchema = z.object({
     })
     .int('El id del vehículo debe ser un número entero')
     .positive('El id del vehículo debe ser positivo'),
-  driverName: driverNameSchema,
+  driverId: z
+    .number({
+      error: (issue) =>
+        issue.input === undefined
+          ? 'El conductor es obligatorio'
+          : 'El id del conductor debe ser un número',
+    })
+    .int('El id del conductor debe ser un número entero')
+    .positive('El id del conductor debe ser positivo'),
   type: movementTypeSchema,
   // ISO 8601 with offset, e.g. "2026-03-10T08:30:00-06:00"; stored in UTC.
   occurredAt: z.iso

@@ -16,7 +16,7 @@ npm install
 cp .env.example .env      # ajuste los valores si es necesario
 docker compose up -d      # inicia PostgreSQL en localhost:5432
 npm run db:migrate        # aplica las migraciones a la base de datos de desarrollo
-npm run db:seed           # opcional: vehículos, conductores y movimientos de ejemplo
+npm run db:seed           # vehículos, conductores y movimientos de ejemplo (única forma de crear conductores)
 npm run dev               # http://localhost:3000/api/health
 ```
 
@@ -75,7 +75,7 @@ Docker Compose crea dos bases de datos al iniciarse por primera vez: `vehicle_tr
 ## Modelo de datos
 
 - **Vehicle** (vehículo): marca, modelo, placa (única, guardada en mayúsculas y sin espacios), año opcional e `isActive` para la eliminación lógica.
-- **Driver** (conductor): `fullName` tal como se escribió, más un `normalizedName` único para que "Ana López" y "ana lópez" se consideren el mismo conductor.
+- **Driver** (conductor): `fullName` e `identityNumber`, el Número de Identidad hondureño (13 dígitos, guardado sin guiones y único). Los conductores solo se crean con los datos de ejemplo (`npm run db:seed`); registrar un movimiento nunca crea uno.
 - **Movement** (movimiento): vehículo, conductor, tipo (`ENTRY`/`EXIT`, entrada/salida), `occurredAt` (en UTC, `timestamptz`) y kilometraje.
 
 Las tablas y columnas usan `snake_case` en PostgreSQL (`@@map`/`@map`), mientras que el código TypeScript usa `camelCase`.
@@ -106,7 +106,7 @@ Todos los errores comparten la misma estructura JSON:
 | GET    | `/api/movements`               | Lista entradas y salidas, de la más reciente a la más antigua. Filtros: `from`, `to` (`YYYY-MM-DD`), `vehicleId`, `driverId`, `type`; paginación: `page`, `pageSize` (máx. 100) |
 | POST   | `/api/movements`               | Registra una entrada o salida (`201`)                                                                                                                                           |
 | GET    | `/api/movements/daily-summary` | Entradas y salidas por día (hora de Honduras), un elemento por día incluidos los días sin movimientos. `from` y `to` obligatorios (`YYYY-MM-DD`), máximo 31 días                |
-| GET    | `/api/drivers`                 | Lista los conductores en orden alfabético. Parámetro: `search`                                                                                                                  |
+| GET    | `/api/drivers`                 | Lista los conductores en orden alfabético, con su `identityNumber`. Parámetro: `search` (nombre o Número de Identidad, con o sin guiones)                                       |
 
 Las listas paginadas responden `{ data, total, page, pageSize }`.
 
@@ -115,7 +115,7 @@ Ejemplo de registro de movimiento:
 ```json
 {
   "vehicleId": 1,
-  "driverName": "Ana López",
+  "driverId": 1,
   "type": "ENTRY",
   "occurredAt": "2026-03-10T08:30:00-06:00",
   "mileage": 15230
@@ -134,7 +134,7 @@ Ejemplo de registro de movimiento:
 - **Alternancia:** el primer movimiento de un vehículo puede ser de cualquier tipo; después, no se permiten dos entradas ni dos salidas seguidas (`409`).
 - **Fecha:** no puede estar en el futuro (`400`) y debe ser posterior al último movimiento del vehículo (`409`). Se envía en ISO 8601 con zona horaria y se guarda en UTC.
 - **Kilometraje:** entero mayor o igual a 0 y no menor que el último kilometraje registrado del vehículo (`409`).
-- **Conductor:** se envía el nombre; si ya existe un conductor con el mismo nombre (sin distinguir mayúsculas ni espacios) se reutiliza, si no, se crea.
+- **Conductor:** se envía el `driverId` de un conductor existente; si no existe responde `404`. Registrar un movimiento nunca crea conductores.
 - **Vehículos desactivados:** no admiten nuevos movimientos (`404`), pero su historial sigue apareciendo en el listado.
 - **Concurrencia:** el registro se hace en una transacción que bloquea la fila del vehículo (`SELECT … FOR UPDATE`), así dos solicitudes simultáneas no pueden registrar, por ejemplo, dos entradas seguidas.
 - **Filtros de fecha:** `from` y `to` son días completos en hora de Honduras (UTC-6, sin horario de verano), ambos inclusive.

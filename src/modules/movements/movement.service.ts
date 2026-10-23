@@ -7,7 +7,7 @@ import {
   startOfLocalDay,
   startOfNextLocalDay,
 } from '../../shared/lib/business-time.js'
-import { findOrCreateDriver } from '../drivers/driver.service.js'
+import { driverNotFoundError } from '../drivers/driver.service.js'
 import { formatPlate } from '../vehicles/vehicle.schemas.js'
 import { vehicleNotFoundError } from '../vehicles/vehicle.service.js'
 import type {
@@ -24,12 +24,13 @@ const movementSelect = {
   mileage: true,
   createdAt: true,
   vehicle: { select: { id: true, plate: true, brand: true, model: true, isActive: true } },
-  driver: { select: { id: true, fullName: true } },
+  driver: { select: { id: true, fullName: true, identityNumber: true } },
 } satisfies Prisma.MovementSelect
 
 /**
  * Registers an entry or exit. Business rules, checked against the vehicle's last movement:
  * - the vehicle must exist and be active;
+ * - the driver must exist (drivers are never created here, only by the seed);
  * - types must alternate (the first movement can be either);
  * - the date must be after the last movement's date;
  * - mileage can't be lower than the last recorded mileage.
@@ -45,6 +46,15 @@ export async function registerMovement(input: RegisterMovementInput) {
 
     if (!vehicle?.is_active) {
       throw vehicleNotFoundError(input.vehicleId)
+    }
+
+    const driver = await transaction.driver.findUnique({
+      where: { id: input.driverId },
+      select: { id: true },
+    })
+
+    if (!driver) {
+      throw driverNotFoundError(input.driverId)
     }
 
     const lastMovement = await transaction.movement.findFirst({
@@ -73,8 +83,6 @@ export async function registerMovement(input: RegisterMovementInput) {
         )
       }
     }
-
-    const driver = await findOrCreateDriver(transaction, input.driverName)
 
     return transaction.movement.create({
       data: {

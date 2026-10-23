@@ -29,10 +29,9 @@ model Vehicle {
 
 model Driver {
   id             Int        @id @default(autoincrement())
-  /// Display value, as typed (trimmed).
   fullName       String     @map("full_name")
-  /// Lowercased, trimmed, and with collapsed spaces; used to find existing drivers.
-  normalizedName String     @unique @map("normalized_name")
+  /// Honduran "Número de Identidad": 13 digits, stored without dashes (e.g. "0801199012345").
+  identityNumber String     @unique @map("identity_number") @db.Char(13)
   createdAt      DateTime   @default(now()) @map("created_at")
   movements      Movement[]
 

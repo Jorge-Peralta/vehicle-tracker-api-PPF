@@ -16,9 +16,9 @@ async function addMovement(
   movement: { type: 'ENTRY' | 'EXIT'; mileage: number; occurredAt: Date },
 ) {
   const driver = await prisma.driver.upsert({
-    where: { normalizedName: 'test driver' },
+    where: { identityNumber: '0801199012345' },
     update: {},
-    create: { fullName: 'Test Driver', normalizedName: 'test driver' },
+    create: { fullName: 'Test Driver', identityNumber: '0801199012345' },
   })
   return prisma.movement.create({ data: { vehicleId, driverId: driver.id, ...movement } })
 }

@@ -1,27 +1,29 @@
 import type { Prisma } from '../../generated/prisma/client.js'
 import { prisma } from '../../shared/db/prisma.js'
-import { normalizeDriverName } from './driver-name.js'
+import { NotFoundError } from '../../shared/errors/app-error.js'
 import type { ListDriversQuery } from './driver.schemas.js'
 
-/** Lists drivers alphabetically, optionally filtered by name. */
-export async function listDrivers({ search }: ListDriversQuery) {
-  return prisma.driver.findMany({
-    where: search ? { fullName: { contains: search, mode: 'insensitive' } } : {},
-    orderBy: { fullName: 'asc' },
-    select: { id: true, fullName: true },
-  })
+export function driverNotFoundError(id: number) {
+  return new NotFoundError(`No se encontró el conductor con id ${id}`)
 }
 
 /**
- * Returns the driver with this name (ignoring case and spacing), creating it if needed.
- * Runs inside the caller's transaction so the driver is only created if the movement is.
+ * Lists drivers alphabetically, optionally filtered by name or identity number
+ * (dashes are ignored, so "0801-1990" matches "0801199012345").
  */
-export async function findOrCreateDriver(transaction: Prisma.TransactionClient, fullName: string) {
-  const normalizedName = normalizeDriverName(fullName)
+export async function listDrivers({ search }: ListDriversQuery) {
+  const where: Prisma.DriverWhereInput = {}
+  if (search) {
+    const identityDigits = search.replace(/\D/g, '')
+    where.OR = [
+      { fullName: { contains: search, mode: 'insensitive' } },
+      ...(identityDigits ? [{ identityNumber: { contains: identityDigits } }] : []),
+    ]
+  }
 
-  return transaction.driver.upsert({
-    where: { normalizedName },
-    update: {},
-    create: { fullName, normalizedName },
+  return prisma.driver.findMany({
+    where,
+    orderBy: { fullName: 'asc' },
+    select: { id: true, fullName: true, identityNumber: true },
   })
 }
