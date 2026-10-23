@@ -8,6 +8,11 @@ export const PLATE_PATTERN = /^[A-Z]{3}\s?\d{4}$/
 
 const MIN_VEHICLE_YEAR = 1900
 
+/** Stored plate "HAA1234" -> "HAA 1234", for messages shown to users. */
+export function formatPlate(plate: string): string {
+  return plate.replace(/^([A-Z]{3})(\d{4})$/, '$1 $2')
+}
+
 /** Accepts "haa 1234" or "HAA1234" and stores "HAA1234". */
 export const plateSchema = z
   .string({ error: 'La placa es obligatoria' })

@@ -5,7 +5,7 @@ import {
   isUniqueConstraintError,
 } from '../../shared/db/prisma-errors.js'
 import { ConflictError, NotFoundError } from '../../shared/errors/app-error.js'
-import type { ListVehiclesQuery, VehicleInput } from './vehicle.schemas.js'
+import { formatPlate, type ListVehiclesQuery, type VehicleInput } from './vehicle.schemas.js'
 
 /** Where a vehicle is according to its last movement; `null` if it has none. */
 export type VehicleStatus = 'INSIDE' | 'OUTSIDE' | null
@@ -23,7 +23,7 @@ export function vehicleNotFoundError(id: number) {
 }
 
 function duplicatePlateError(plate: string) {
-  return new ConflictError(`Ya existe un vehículo con la placa ${plate}`)
+  return new ConflictError(`Ya existe un vehículo con la placa ${formatPlate(plate)}`)
 }
 
 /** Lists vehicles by plate. Inactive (soft-deleted) vehicles are hidden unless requested. */

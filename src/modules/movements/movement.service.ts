@@ -7,6 +7,7 @@ import {
   startOfNextLocalDay,
 } from '../../shared/lib/business-time.js'
 import { findOrCreateDriver } from '../drivers/driver.service.js'
+import { formatPlate } from '../vehicles/vehicle.schemas.js'
 import { vehicleNotFoundError } from '../vehicles/vehicle.service.js'
 import type { ListMovementsQuery, RegisterMovementInput } from './movement.schemas.js'
 
@@ -50,8 +51,8 @@ export async function registerMovement(input: RegisterMovementInput) {
       if (lastMovement.type === input.type) {
         const message =
           lastMovement.type === 'ENTRY'
-            ? `El vehículo ${vehicle.plate} ya está dentro; el siguiente movimiento debe ser una salida`
-            : `El vehículo ${vehicle.plate} ya está fuera; el siguiente movimiento debe ser una entrada`
+            ? `El vehículo ${formatPlate(vehicle.plate)} ya está dentro; el siguiente movimiento debe ser una salida`
+            : `El vehículo ${formatPlate(vehicle.plate)} ya está fuera; el siguiente movimiento debe ser una entrada`
         throw new ConflictError(message)
       }
 

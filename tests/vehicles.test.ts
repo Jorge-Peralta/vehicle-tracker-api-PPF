@@ -100,7 +100,7 @@ describe('POST /api/vehicles', () => {
       .send({ ...validVehicle, plate: 'HAA 1234' })
 
     expect(response.status).toBe(409)
-    expect(response.body).toEqual({ message: 'Ya existe un vehículo con la placa HAA1234' })
+    expect(response.body).toEqual({ message: 'Ya existe un vehículo con la placa HAA 1234' })
     expect(await prisma.vehicle.count()).toBe(1)
   })
 
@@ -246,7 +246,7 @@ describe('PUT /api/vehicles/:id', () => {
       .send({ ...validVehicle, plate: 'HBB2222' })
 
     expect(response.status).toBe(409)
-    expect(response.body).toEqual({ message: 'Ya existe un vehículo con la placa HBB2222' })
+    expect(response.body).toEqual({ message: 'Ya existe un vehículo con la placa HBB 2222' })
   })
 
   it('responds 404 for a missing or inactive vehicle', async () => {

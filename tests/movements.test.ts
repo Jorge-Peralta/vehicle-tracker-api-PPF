@@ -86,7 +86,7 @@ describe('POST /api/movements', () => {
 
     expect(response.status).toBe(409)
     expect(response.body).toEqual({
-      message: 'El vehículo HAA1234 ya está dentro; el siguiente movimiento debe ser una salida',
+      message: 'El vehículo HAA 1234 ya está dentro; el siguiente movimiento debe ser una salida',
     })
     expect(await prisma.movement.count()).toBe(1)
   })
