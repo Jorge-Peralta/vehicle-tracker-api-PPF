@@ -85,16 +85,31 @@ Todos los errores comparten la misma estructura JSON:
 
 ## Endpoints
 
-| Método | Ruta                | Descripción                                                                                       |
-| ------ | ------------------- | ------------------------------------------------------------------------------------------------- |
-| GET    | `/api/health`       | Verificación de estado                                                                            |
-| GET    | `/api/vehicles`     | Lista los vehículos activos. Parámetros: `search` (marca, modelo o placa), `includeInactive=true` |
-| GET    | `/api/vehicles/:id` | Obtiene un vehículo con su estado actual (`INSIDE`/`OUTSIDE`) y su último kilometraje             |
-| POST   | `/api/vehicles`     | Crea un vehículo (`201`). Si la placa pertenece a un vehículo eliminado, lo reactiva (`200`)      |
-| PUT    | `/api/vehicles/:id` | Actualiza un vehículo activo                                                                      |
-| DELETE | `/api/vehicles/:id` | Elimina un vehículo. Responde `{ "result": "deleted" }` o `{ "result": "deactivated" }`           |
+| Método | Ruta                | Descripción                                                                                                                                                                     |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`       | Verificación de estado                                                                                                                                                          |
+| GET    | `/api/vehicles`     | Lista los vehículos activos. Parámetros: `search` (marca, modelo o placa), `includeInactive=true`                                                                               |
+| GET    | `/api/vehicles/:id` | Obtiene un vehículo con su estado actual (`INSIDE`/`OUTSIDE`) y su último kilometraje                                                                                           |
+| POST   | `/api/vehicles`     | Crea un vehículo (`201`). Si la placa pertenece a un vehículo eliminado, lo reactiva (`200`)                                                                                    |
+| PUT    | `/api/vehicles/:id` | Actualiza un vehículo activo                                                                                                                                                    |
+| DELETE | `/api/vehicles/:id` | Elimina un vehículo. Responde `{ "result": "deleted" }` o `{ "result": "deactivated" }`                                                                                         |
+| GET    | `/api/movements`    | Lista entradas y salidas, de la más reciente a la más antigua. Filtros: `from`, `to` (`YYYY-MM-DD`), `vehicleId`, `driverId`, `type`; paginación: `page`, `pageSize` (máx. 100) |
+| POST   | `/api/movements`    | Registra una entrada o salida (`201`)                                                                                                                                           |
+| GET    | `/api/drivers`      | Lista los conductores en orden alfabético. Parámetro: `search`                                                                                                                  |
 
-Se irán agregando más endpoints a medida que avance el proyecto.
+Las listas paginadas responden `{ data, total, page, pageSize }`.
+
+Ejemplo de registro de movimiento:
+
+```json
+{
+  "vehicleId": 1,
+  "driverName": "Ana López",
+  "type": "ENTRY",
+  "occurredAt": "2026-03-10T08:30:00-06:00",
+  "mileage": 15230
+}
+```
 
 ### Reglas de vehículos
 
@@ -102,3 +117,13 @@ Se irán agregando más endpoints a medida que avance el proyecto.
 - **Campos:** `brand`, `model` y `plate` son obligatorios; `year` es opcional (entero, desde 1900 hasta el próximo año).
 - **Eliminación:** si el vehículo no tiene movimientos se elimina definitivamente (`deleted`); si los tiene, se desactiva (`deactivated`) para conservar el historial. Los vehículos desactivados no aparecen en los listados por defecto y no se pueden editar.
 - **Placa duplicada:** responde `409` si otro vehículo activo ya usa la placa.
+
+### Reglas de movimientos
+
+- **Alternancia:** el primer movimiento de un vehículo puede ser de cualquier tipo; después, no se permiten dos entradas ni dos salidas seguidas (`409`).
+- **Fecha:** no puede estar en el futuro (`400`) y debe ser posterior al último movimiento del vehículo (`409`). Se envía en ISO 8601 con zona horaria y se guarda en UTC.
+- **Kilometraje:** entero mayor o igual a 0 y no menor que el último kilometraje registrado del vehículo (`409`).
+- **Conductor:** se envía el nombre; si ya existe un conductor con el mismo nombre (sin distinguir mayúsculas ni espacios) se reutiliza, si no, se crea.
+- **Vehículos desactivados:** no admiten nuevos movimientos (`404`), pero su historial sigue apareciendo en el listado.
+- **Concurrencia:** el registro se hace en una transacción que bloquea la fila del vehículo (`SELECT … FOR UPDATE`), así dos solicitudes simultáneas no pueden registrar, por ejemplo, dos entradas seguidas.
+- **Filtros de fecha:** `from` y `to` son días completos en hora de Honduras (UTC-6, sin horario de verano), ambos inclusive.

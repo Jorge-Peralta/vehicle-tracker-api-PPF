@@ -6,6 +6,7 @@
  */
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient, type MovementType } from '../src/generated/prisma/client.js'
+import { normalizeDriverName } from '../src/modules/drivers/driver-name.js'
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
@@ -27,10 +28,6 @@ const vehicles = [
 ]
 
 const driverNames = ['Carlos Mejía', 'Ana Martínez', 'José Rodríguez', 'María López']
-
-function normalizeDriverName(fullName: string): string {
-  return fullName.trim().replace(/\s+/g, ' ').toLowerCase()
-}
 
 /**
  * Builds an alternating ENTRY/EXIT history for one vehicle, ending a few hours ago,

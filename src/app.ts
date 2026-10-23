@@ -2,6 +2,8 @@ import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
 import { env } from './config/env.js'
+import { driverRouter } from './modules/drivers/driver.routes.js'
+import { movementRouter } from './modules/movements/movement.routes.js'
 import { vehicleRouter } from './modules/vehicles/vehicle.routes.js'
 import { errorHandler } from './shared/middlewares/error-handler.js'
 import { notFoundHandler } from './shared/middlewares/not-found.js'
@@ -22,6 +24,8 @@ export function createApp() {
   })
 
   app.use('/api/vehicles', vehicleRouter)
+  app.use('/api/movements', movementRouter)
+  app.use('/api/drivers', driverRouter)
 
   app.use(notFoundHandler)
   app.use(errorHandler)
